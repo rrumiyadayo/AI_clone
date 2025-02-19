@@ -5,6 +5,11 @@ from torch.utils.data import DataLoader, Dataset
 from transformers import DistilBertTokenizer, DistilBertForSequenceClassification
 from datasets import load_dataset
 from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
+import warnings
+
+# 警告の抑制
+warnings.filterwarnings("ignore", category=UserWarning, module="transformers")
 
 # データセットの準備
 def prepare_dataset():
@@ -56,10 +61,30 @@ def prepare_model():
     model = DistilBertForSequenceClassification.from_pretrained("distilbert-base-uncased", num_labels=2)
     return model
 
+# モデルの評価
+def evaluate_model(model, dataloader, device):
+    model.eval()
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for batch in dataloader:
+            input_ids = batch['input_ids'].to(device)
+            attention_mask = batch['attention_mask'].to(device)
+            labels = batch['labels'].to(device)
+            outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+            _, predicted = torch.max(outputs.logits, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+    accuracy = 100 * correct / total
+    return accuracy
+
 # ファインチューニング
 def train_model(model, train_loader, val_loader, device, num_epochs=3):
     model.to(device)
     optimizer = optim.AdamW(model.parameters(), lr=2e-5)
+
+    train_losses = []
+    val_accuracies = []
 
     for epoch in range(num_epochs):
         model.train()
@@ -76,23 +101,39 @@ def train_model(model, train_loader, val_loader, device, num_epochs=3):
             total_loss += loss.item()
         
         avg_loss = total_loss / len(train_loader)
+        train_losses.append(avg_loss)
         print(f"Epoch {epoch + 1}, Loss: {avg_loss}")
 
-        model.eval()
-        correct = 0
-        total = 0
-        with torch.no_grad():
-            for batch in val_loader:
-                input_ids = batch['input_ids'].to(device)
-                attention_mask = batch['attention_mask'].to(device)
-                labels = batch['labels'].to(device)
-                outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-                _, predicted = torch.max(outputs.logits, 1)
-                total += labels.size(0)
-                correct += (predicted == labels).sum().item()
-        
-        accuracy = 100 * correct / total
-        print(f"Epoch {epoch + 1}, Validation Accuracy: {accuracy}%")
+        # バリデーションの評価
+        val_accuracy = evaluate_model(model, val_loader, device)
+        val_accuracies.append(val_accuracy)
+        print(f"Epoch {epoch + 1}, Validation Accuracy: {val_accuracy}%")
+
+    return train_losses, val_accuracies
+
+# 結果の可視化
+def plot_results(train_losses, val_accuracies, initial_accuracy):
+    plt.figure(figsize=(12, 6))
+
+    # 損失のプロット
+    plt.subplot(1, 2, 1)
+    plt.plot(train_losses, label='Training Loss')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.title('Training Loss over Epochs')
+    plt.legend()
+
+    # 正解率のプロット
+    plt.subplot(1, 2, 2)
+    plt.plot(val_accuracies, label='Validation Accuracy', color='orange')
+    plt.axhline(y=initial_accuracy, color='gray', linestyle='--', label=f'Initial Accuracy ({initial_accuracy}%)')
+    plt.xlabel('Epoch')
+    plt.ylabel('Accuracy (%)')
+    plt.title('Validation Accuracy over Epochs')
+    plt.legend()
+
+    plt.tight_layout()
+    plt.show()
 
 # メイン関数
 def main():
@@ -113,8 +154,19 @@ def main():
     # デバイスの設定
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+    # 初期モデルの評価
+    initial_accuracy = evaluate_model(model, val_loader, device)
+    print(f"Initial Model Validation Accuracy: {initial_accuracy}%")
+
     # ファインチューニング
-    train_model(model, train_loader, val_loader, device)
+    train_losses, val_accuracies = train_model(model, train_loader, val_loader, device)
+
+    # ファインチューニング後のモデルの評価
+    final_accuracy = evaluate_model(model, val_loader, device)
+    print(f"Fine-Tuned Model Validation Accuracy: {final_accuracy}%")
+
+    # 結果の可視化
+    plot_results(train_losses, val_accuracies, initial_accuracy)
 
 if __name__ == "__main__":
     main()
