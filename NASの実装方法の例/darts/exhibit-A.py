@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
 from transformers import DistilBertTokenizer, DistilBertForSequenceClassification
-from datasets import load_dataset
+from datasets import load_dataset # HuggingFaceHubから。HTTPリクエストとして送信する
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 import warnings
@@ -26,6 +26,10 @@ def prepare_dataset():
     start_time = time.time()
 
     # trainデータセットからtrainとvalidationに分割
+    # labelは正解データ（ポジティブ・ネガティブ）
+    # データセットの0.2は検証用化する
+    # 学習用＝train_texts/labels
+    # 検証用＝val_texts/labels
     train_texts, val_texts, train_labels, val_labels = train_test_split(
         dataset["train"]["text"], dataset["train"]["label"], test_size=0.2, random_state=42
     )
