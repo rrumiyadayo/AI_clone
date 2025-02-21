@@ -123,35 +123,3 @@ trainer.train()
 test_results = trainer.evaluate(datasets["test"])
 print("Test Results:")
 print(test_results)
-
-# Save the fine-tuned model
-trainer.save_model("./reuslt/novel_classifier_prototype_final(small_ver)")
-
-fine_tuned_model = AutoModelForSequenceClassification.from_pretrained("./reuslt/novel_classifier_prototype_final(small_ver)") # Load from your saved directory
-
-# --- Choose a sample paragraph to test (you can pick one from your original novel_x or novel_y strings, or create a new one) ---
-sample_text = """
-夕食後、カズマはいつものように自室でゴロゴロしていた。
-特に何をするでもなく、天井を眺めて時間を潰す。
-今日は冒険者ギルドでクエストの依頼を探したが、ろくなものがなかった。
-""" # Example paragraph from 'このすば' (novel_x - label 0)
-
-# --- Tokenize the sample text ---
-inputs = tokenizer(sample_text, padding="max_length", truncation=True, max_length=128, return_tensors="pt") # 'pt' for PyTorch tensors
-
-# --- Make a prediction with the fine-tuned model ---
-with torch.no_grad(): # Disable gradient calculation for inference
-    outputs = fine_tuned_model(**inputs) # Pass tokenized input to the model
-    predictions = outputs.logits.argmax(-1) # Get the predicted class (0 or 1)
-
-predicted_class = predictions.item() # Extract the class number from the tensor
-
-# --- Interpret the prediction ---
-if predicted_class == 0:
-    predicted_novel = "このすば (Novel X)"
-else:
-    predicted_novel = "ひげひろ (Novel Y)"
-
-print(f"\n--- Manual Prediction ---")
-print(f"Sample Text: '{sample_text[:50]}...'") # Print the first 50 characters of the sample text
-print(f"Predicted Novel: {predicted_novel} (Class: {predicted_class})")
