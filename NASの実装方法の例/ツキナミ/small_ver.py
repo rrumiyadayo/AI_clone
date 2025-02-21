@@ -71,7 +71,7 @@ datasets = datasets.map(tokenize, batched=True)
 
 # Define training arguments
 training_args = TrainingArguments(
-    output_dir="./reuslt/novel_classifier_prototype_final(small_ver)",
+    output_dir="./result/novel_classifier_prototype_final(small_ver)",
     evaluation_strategy="epoch",
     # --- REDUCED EPOCHS ---
     num_train_epochs=1, # Train for only 1 epoch
