@@ -29,10 +29,14 @@ labels = []
 
 # Split Novel text into paragraphs and add to dataset
 paragraphs_x = novel_x.split("\n\n")
+# --- REDUCED DATASET SIZE ---
+paragraphs_x = paragraphs_x[:10]  # Take only the first 10 paragraphs from novel x
 texts.extend(paragraphs_x)
 labels.extend([0] * len(paragraphs_x))
 
 paragraphs_y = novel_y.split("\n\n")
+# --- REDUCED DATASET SIZE ---
+paragraphs_y = paragraphs_y[:10]  # Take only the first 10 paragraphs from novel y
 texts.extend(paragraphs_y)
 labels.extend([1] * len(paragraphs_y))
 
@@ -60,7 +64,8 @@ def tokenize(examples):
     return tokenizer(
         examples["text"],
         padding="max_length",
-        truncation=True
+        truncation=True,
+        max_length=128 # --- REDUCE MAX SEQUENCE LENGTH --- Limit token length to 128
     )
 datasets = datasets.map(tokenize, batched=True)
 
@@ -68,19 +73,18 @@ datasets = datasets.map(tokenize, batched=True)
 training_args = TrainingArguments(
     output_dir="./novel_classifier_prototype",
     evaluation_strategy="epoch",
-    num_train_epochs=3,
+    # --- REDUCED EPOCHS ---
+    num_train_epochs=1, # Train for only 1 epoch
     learning_rate=2e-5,
-    
-     # Adjust these if running into memory issues, especially on CPU
     per_device_train_batch_size=16,
     per_device_eval_batch_size=16,
-    
     save_strategy="epoch",
-    save_total_limit=2,
-    load_best_model_at_end=True,
-    metric_for_best_model="f1",
-    greater_is_better=True,
-    logging_steps=50,
+    save_total_limit=1, # Keep only the last saved model
+    # --- REMOVE BEST MODEL LOADING FOR QUICK DEMO ---
+    # load_best_model_at_end=True,
+    # metric_for_best_model="f1",
+    # greater_is_better=True,
+    logging_steps=100, # Log less frequently
     report_to="none"
 )
 
@@ -121,8 +125,8 @@ print("Test Results:")
 print(test_results)
 
 # Save the fine-tuned model
-trainer.save_model("./novel_classifier_prototype_final")
+trainer.save_model("./reuslt/novel_classifier_prototype_final(small_ver)")
 
 print("--- Training and Evaluation Complete ---")
-print("Model saved to ./novel_classifier_prototype_final")
-print("Please check the 'novel_classifier_prototype' directory for intermediate checkpoints and logs.")
+print("Model saved to ./result/novel_classifier_prototype_final(small_ver)")
+print("Please check the 'result/novel_classifier_prototype_final(small_ver)' directory for intermediate checkpoints and logs.")
