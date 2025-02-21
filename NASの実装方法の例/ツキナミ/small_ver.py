@@ -3,21 +3,21 @@ from datasets import Dataset, DatasetDict
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, f1_score
-import torch  # Import torch to check GPU availability
+import torch
 
 # Load pretrained model and tokenizer
 model = AutoModelForSequenceClassification.from_pretrained("distilbert-base-uncased", num_labels=2)
 tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased")
 
 try:
-    with open(r"NASの実装方法の例\ツキナミ\このすば\input.txt", "r", encoding="utf-8") as f:
+    with open(r"このすば\input.txt", "r", encoding="utf-8") as f:
         novel_x = f.read()
 except FileNotFoundError:
     print(f"Error: File 'このすば\\input.txt' not found. Please ensure the file is in the correct directory (currently assumed to be the same directory as your script).")
     exit()
 
 try:
-    with open(r"NASの実装方法の例\ツキナミ\ひげひろ\input.txt", "r", encoding="utf-8") as f:
+    with open(r"ひげひろ\input.txt", "r", encoding="utf-8") as f:
         novel_y = f.read()
 except FileNotFoundError:
     print(f"Error: File 'ひげひろ\\input.txt' not found. Please ensure the file is in the correct directory (currently assumed to be the same directory as your script).")
@@ -30,13 +30,13 @@ labels = []
 # Split Novel text into paragraphs and add to dataset
 paragraphs_x = novel_x.split("\n\n")
 # --- REDUCED DATASET SIZE ---
-paragraphs_x = paragraphs_x[:10]  # Take only the first 10 paragraphs from novel x
+paragraphs_x = paragraphs_x[:10]  # Take limited paragraphs from novel x
 texts.extend(paragraphs_x)
 labels.extend([0] * len(paragraphs_x))
 
 paragraphs_y = novel_y.split("\n\n")
 # --- REDUCED DATASET SIZE ---
-paragraphs_y = paragraphs_y[:10]  # Take only the first 10 paragraphs from novel y
+paragraphs_y = paragraphs_y[:10]  # Take limited paragraphs from novel y
 texts.extend(paragraphs_y)
 labels.extend([1] * len(paragraphs_y))
 
@@ -74,12 +74,13 @@ training_args = TrainingArguments(
     output_dir="./result/novel_classifier_prototype_final(small_ver)",
     evaluation_strategy="epoch",
     # --- REDUCED EPOCHS ---
-    num_train_epochs=1, # Train for only 1 epoch
+    num_train_epochs=1, # Train for only a limited epoch
     learning_rate=2e-5,
     per_device_train_batch_size=16,
     per_device_eval_batch_size=16,
-    save_strategy="epoch",
-    save_total_limit=1, # Keep only the last saved model
+    # --- REMOVE checkpoint saving arguments ---
+    #save_strategy="epoch", # No need for epoch saving for final model in root dir
+    #save_total_limit=1,  # No need for epoch saving for final model in root dir
     # --- REMOVE BEST MODEL LOADING FOR QUICK DEMO ---
     # load_best_model_at_end=True,
     # metric_for_best_model="f1",
@@ -123,3 +124,9 @@ trainer.train()
 test_results = trainer.evaluate(datasets["test"])
 print("Test Results:")
 print(test_results)
+
+
+print("--- Training and Evaluation Complete ---")
+trainer.save_model("./result/novel_classifier_prototype_final(small_ver)")
+print("Model saved to ./result/novel_classifier_prototype_final(small_ver)")
+print("Please check the './result/novel_classifier_prototype_final(small_ver)' directory for the final model files.")
